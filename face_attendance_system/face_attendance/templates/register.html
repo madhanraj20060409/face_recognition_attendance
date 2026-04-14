@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Register Student – FaceAttend AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand"><i class="fas fa-brain"></i> FaceAttend AI</div>
+    <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/register" class="active"><i class="fas fa-user-plus"></i> Register</a>
+        <a href="/attendance"><i class="fas fa-camera"></i> Attendance</a>
+        <a href="/report"><i class="fas fa-chart-bar"></i> Report</a>
+    </div>
+</nav>
+
+<div class="page-wrapper">
+    <div class="page-header">
+        <h1><i class="fas fa-user-plus"></i> Register New Student</h1>
+        <p>Capture a clear face photo and enter the student's name to register them.</p>
+    </div>
+
+    <div class="register-container">
+
+        <!-- Camera Panel -->
+        <div class="camera-panel card">
+            <h3><i class="fas fa-camera"></i> Camera Preview</h3>
+
+            <div class="video-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <!-- Overlay shown after capture -->
+                <div class="preview-overlay" id="previewOverlay" style="display:none;">
+                    <img id="capturedImg" alt="Captured face"/>
+                    <div class="overlay-label">
+                        <i class="fas fa-check-circle"></i> Photo Captured
+                    </div>
+                </div>
+                <!-- Face guide box -->
+                <div class="face-guide">
+                    <div class="guide-corner tl"></div>
+                    <div class="guide-corner tr"></div>
+                    <div class="guide-corner bl"></div>
+                    <div class="guide-corner br"></div>
+                </div>
+            </div>
+
+            <div class="camera-hint">Position your face inside the box</div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" id="startCameraBtn" onclick="startCamera()">
+                    <i class="fas fa-video"></i> Start Camera
+                </button>
+                <button class="btn btn-secondary" id="captureBtn" onclick="capturePhoto()" disabled>
+                    <i class="fas fa-camera-retro"></i> Capture Photo
+                </button>
+                <button class="btn btn-outline" id="retakeBtn" onclick="retakePhoto()" style="display:none;">
+                    <i class="fas fa-redo"></i> Retake
+                </button>
+            </div>
+        </div>
+
+        <!-- Form Panel -->
+        <div class="form-panel card">
+            <h3><i class="fas fa-id-card"></i> Student Details</h3>
+
+            <div class="form-group">
+                <label for="studentName">Full Name <span class="required">*</span></label>
+                <input type="text" id="studentName" placeholder="e.g. Ravi Kumar" />
+            </div>
+
+            <div class="photo-status" id="photoStatus">
+                <i class="fas fa-image"></i> No photo captured yet
+            </div>
+
+            <button class="btn btn-primary btn-full" id="registerBtn" onclick="registerStudent()" disabled>
+                <i class="fas fa-user-plus"></i> Register Student
+            </button>
+
+            <!-- Status Message -->
+            <div class="alert" id="alertBox" style="display:none;"></div>
+
+            <!-- Registered Students List -->
+            <div class="students-list" id="studentsList">
+                <h4><i class="fas fa-users"></i> Registered Students</h4>
+                <div id="studentsContainer"><p class="muted">Loading...</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+    // ── Variables ──
+    let capturedImageData = null;
+
+    // ── Start webcam ──
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.getElementById("video");
+            video.srcObject = stream;
+            document.getElementById("startCameraBtn").disabled = true;
+            document.getElementById("captureBtn").disabled = false;
+        } catch(e) {
+            showAlert("Cannot access camera: " + e.message, "error");
+        }
+    }
+
+    // ── Capture photo from video ──
+    function capturePhoto() {
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+
+        capturedImageData = canvas.toDataURL("image/jpeg");
+
+        // Show preview
+        document.getElementById("capturedImg").src = capturedImageData;
+        document.getElementById("previewOverlay").style.display = "flex";
+
+        // Update UI
+        document.getElementById("photoStatus").innerHTML = 
+            '<i class="fas fa-check-circle" style="color:#10b981"></i> Photo captured!';
+        document.getElementById("photoStatus").style.color = "#10b981";
+        document.getElementById("captureBtn").style.display = "none";
+        document.getElementById("retakeBtn").style.display = "inline-flex";
+        checkRegisterReady();
+    }
+
+    // ── Retake photo ──
+    function retakePhoto() {
+        capturedImageData = null;
+        document.getElementById("previewOverlay").style.display = "none";
+        document.getElementById("captureBtn").style.display = "inline-flex";
+        document.getElementById("retakeBtn").style.display = "none";
+        document.getElementById("photoStatus").innerHTML = 
+            '<i class="fas fa-image"></i> No photo captured yet';
+        document.getElementById("photoStatus").style.color = "";
+        checkRegisterReady();
+    }
+
+    // ── Enable register button only when both name and photo ready ──
+    function checkRegisterReady() {
+        const name = document.getElementById("studentName").value.trim();
+        document.getElementById("registerBtn").disabled = !(name && capturedImageData);
+    }
+
+    document.getElementById("studentName").addEventListener("input", checkRegisterReady);
+
+    // ── Register student via API ──
+    async function registerStudent() {
+        const name = document.getElementById("studentName").value.trim();
+        if (!name || !capturedImageData) return;
+
+        const btn = document.getElementById("registerBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+
+        try {
+            const res = await fetch("/api/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, image: capturedImageData })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showAlert(data.message, "success");
+                document.getElementById("studentName").value = "";
+                retakePhoto();
+                loadStudents();
+            } else {
+                showAlert(data.message, "error");
+            }
+        } catch(e) {
+            showAlert("Network error: " + e.message, "error");
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-user-plus"></i> Register Student';
+    }
+
+    // ── Show alert box ──
+    function showAlert(message, type) {
+        const box = document.getElementById("alertBox");
+        box.style.display = "block";
+        box.className = "alert alert-" + type;
+        box.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+        setTimeout(() => box.style.display = "none", 4000);
+    }
+
+    // ── Load and display registered students ──
+    async function loadStudents() {
+        const res = await fetch("/api/students");
+        const data = await res.json();
+        const container = document.getElementById("studentsContainer");
+
+        if (data.students.length === 0) {
+            container.innerHTML = '<p class="muted">No students registered yet.</p>';
+        } else {
+            container.innerHTML = data.students.map((s, i) =>
+                `<div class="student-chip">
+                    <span class="student-num">${i+1}</span>
+                    <i class="fas fa-user"></i> ${s}
+                </div>`
+            ).join("");
+        }
+    }
+
+    loadStudents();
+</script>
+</body>
+</html>

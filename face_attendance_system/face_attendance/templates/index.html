@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>AI Face Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="navbar">
+    <div class="nav-brand">
+        <i class="fas fa-brain"></i> FaceAttend AI
+    </div>
+    <div class="nav-links">
+        <a href="/" class="active"><i class="fas fa-home"></i> Home</a>
+        <a href="/register"><i class="fas fa-user-plus"></i> Register</a>
+        <a href="/attendance"><i class="fas fa-camera"></i> Attendance</a>
+        <a href="/report"><i class="fas fa-chart-bar"></i> Report</a>
+    </div>
+</nav>
+
+<!-- ── Hero Section ── -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge"><i class="fas fa-sparkles"></i> AI Powered</div>
+        <h1>Smart Face Recognition<br/><span class="gradient-text">Attendance System</span></h1>
+        <p>Automate your attendance with cutting-edge facial recognition technology. 
+           Fast, accurate, and completely touchless.</p>
+        <div class="hero-buttons">
+            <a href="/register" class="btn btn-primary"><i class="fas fa-user-plus"></i> Register Student</a>
+            <a href="/attendance" class="btn btn-secondary"><i class="fas fa-camera"></i> Take Attendance</a>
+        </div>
+    </div>
+    <div class="hero-image">
+        <div class="face-scan-animation">
+            <div class="scan-circle outer"></div>
+            <div class="scan-circle middle"></div>
+            <div class="scan-circle inner"></div>
+            <div class="scan-line"></div>
+            <i class="fas fa-user scan-icon"></i>
+        </div>
+    </div>
+</section>
+
+<!-- ── Feature Cards ── -->
+<section class="features">
+    <h2 class="section-title">How It Works</h2>
+    <div class="cards-grid">
+        <div class="card">
+            <div class="card-icon blue"><i class="fas fa-user-plus"></i></div>
+            <h3>1. Register</h3>
+            <p>Add students by capturing their face photo and entering their name. Takes just seconds!</p>
+        </div>
+        <div class="card">
+            <div class="card-icon purple"><i class="fas fa-camera"></i></div>
+            <h3>2. Scan</h3>
+            <p>Open the attendance page, start the camera, and let AI detect and recognize all faces.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon green"><i class="fas fa-check-circle"></i></div>
+            <h3>3. Auto Mark</h3>
+            <p>Attendance is automatically recorded with name, date, and timestamp in a CSV file.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon orange"><i class="fas fa-download"></i></div>
+            <h3>4. Download</h3>
+            <p>View detailed reports filtered by date and download them as a CSV/Excel file.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── Stats Bar ── -->
+<section class="stats-bar">
+    <div class="stat">
+        <div class="stat-number" id="stat-students">0</div>
+        <div class="stat-label">Registered Students</div>
+    </div>
+    <div class="stat">
+        <div class="stat-number" id="stat-records">0</div>
+        <div class="stat-label">Attendance Records</div>
+    </div>
+    <div class="stat">
+        <div class="stat-number">99%</div>
+        <div class="stat-label">Recognition Accuracy</div>
+    </div>
+    <div class="stat">
+        <div class="stat-number">&lt;1s</div>
+        <div class="stat-label">Detection Speed</div>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Built with <i class="fas fa-heart" style="color:#f43f5e"></i> for College Hackathon &nbsp;|&nbsp; 
+       Powered by <strong>Flask + OpenCV + face_recognition</strong></p>
+</footer>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+    // Load live stats on home page
+    fetch("/api/students").then(r=>r.json()).then(d=>{
+        document.getElementById("stat-students").textContent = d.students.length;
+    });
+    fetch("/api/report").then(r=>r.json()).then(d=>{
+        document.getElementById("stat-records").textContent = d.records.length;
+    });
+</script>
+</body>
+</html>

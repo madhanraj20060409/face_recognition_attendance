@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Attendance Report – FaceAttend AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-brand"><i class="fas fa-brain"></i> FaceAttend AI</div>
+    <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/register"><i class="fas fa-user-plus"></i> Register</a>
+        <a href="/attendance"><i class="fas fa-camera"></i> Attendance</a>
+        <a href="/report" class="active"><i class="fas fa-chart-bar"></i> Report</a>
+    </div>
+</nav>
+
+<div class="page-wrapper">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-bar"></i> Attendance Report</h1>
+        <p>View, filter, and download attendance records.</p>
+    </div>
+
+    <!-- Filter & Download Bar -->
+    <div class="card report-toolbar">
+        <div class="toolbar-left">
+            <label><i class="fas fa-calendar"></i> Filter by Date:</label>
+            <input type="date" id="filterDate" onchange="loadReport()"/>
+            <button class="btn btn-outline btn-sm" onclick="clearFilter()">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-success" onclick="downloadCSV()">
+                <i class="fas fa-file-csv"></i> Download CSV
+            </button>
+            <button class="btn btn-primary" onclick="downloadExcel()">
+                <i class="fas fa-file-excel"></i> Download Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card blue">
+            <i class="fas fa-users"></i>
+            <div class="summary-value" id="sumTotal">0</div>
+            <div class="summary-label">Total Records</div>
+        </div>
+        <div class="summary-card green">
+            <i class="fas fa-user-check"></i>
+            <div class="summary-value" id="sumToday">0</div>
+            <div class="summary-label">Today's Attendance</div>
+        </div>
+        <div class="summary-card purple">
+            <i class="fas fa-calendar-alt"></i>
+            <div class="summary-value" id="sumDays">0</div>
+            <div class="summary-label">Days Tracked</div>
+        </div>
+        <div class="summary-card orange">
+            <i class="fas fa-user"></i>
+            <div class="summary-value" id="sumStudents">0</div>
+            <div class="summary-label">Unique Students</div>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="card table-card">
+        <div class="table-header">
+            <h3><i class="fas fa-table"></i> Attendance Records</h3>
+            <span class="record-count" id="recordCount">Loading...</span>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="data-table" id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th><i class="fas fa-user"></i> Name</th>
+                        <th><i class="fas fa-calendar"></i> Date</th>
+                        <th><i class="fas fa-clock"></i> Time</th>
+                        <th><i class="fas fa-info-circle"></i> Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" class="empty-row"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+    let allRecords = []; // Store all fetched records
+
+    // ── Load report data ──
+    async function loadReport() {
+        const dateFilter = document.getElementById("filterDate").value;
+        const url = dateFilter ? `/api/report?date=${dateFilter}` : "/api/report";
+
+        const res = await fetch(url);
+        const data = await res.json();
+        allRecords = data.records;
+
+        renderTable(allRecords);
+        updateSummary(allRecords);
+    }
+
+    // ── Render table rows ──
+    function renderTable(records) {
+        const tbody = document.getElementById("tableBody");
+        document.getElementById("recordCount").textContent = `${records.length} record(s)`;
+
+        if (records.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-row"><i class="fas fa-inbox"></i> No records found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = records.map((r, i) => `
+            <tr class="fade-in" style="animation-delay:${i * 0.03}s">
+                <td>${i + 1}</td>
+                <td><i class="fas fa-user-circle"></i> ${r.Name}</td>
+                <td>${r.Date}</td>
+                <td>${r.Time}</td>
+                <td><span class="badge badge-present">${r.Status}</span></td>
+            </tr>
+        `).join("");
+    }
+
+    // ── Update summary cards ──
+    function updateSummary(records) {
+        const today = new Date().toISOString().split("T")[0];
+        const todayCount = records.filter(r => r.Date === today).length;
+        const uniqueDays = [...new Set(records.map(r => r.Date))].length;
+        const uniqueStudents = [...new Set(records.map(r => r.Name))].length;
+
+        document.getElementById("sumTotal").textContent = records.length;
+        document.getElementById("sumToday").textContent = todayCount;
+        document.getElementById("sumDays").textContent = uniqueDays;
+        document.getElementById("sumStudents").textContent = uniqueStudents;
+    }
+
+    // ── Clear date filter ──
+    function clearFilter() {
+        document.getElementById("filterDate").value = "";
+        loadReport();
+    }
+
+    // ── Download CSV directly from server ──
+    function downloadCSV() {
+        window.location.href = "/api/download";
+    }
+
+    // ── Download as Excel using SheetJS (client-side) ──
+    function downloadExcel() {
+        if (allRecords.length === 0) {
+            alert("No records to download!");
+            return;
+        }
+
+        // Use SheetJS to create Excel
+        const script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+        script.onload = () => {
+            const wsData = [
+                ["#", "Name", "Date", "Time", "Status"],
+                ...allRecords.map((r, i) => [i+1, r.Name, r.Date, r.Time, r.Status])
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+            XLSX.writeFile(wb, "attendance.xlsx");
+        };
+        document.head.appendChild(script);
+    }
+
+    // ── Set today's date as default filter ──
+    document.getElementById("filterDate").value = new Date().toISOString().split("T")[0];
+
+    // ── Initial load ──
+    loadReport();
+</script>
+</body>
+</html>
